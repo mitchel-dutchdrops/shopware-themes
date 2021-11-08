@@ -5,6 +5,7 @@
 {% set ORDER_TRANSACTION_STATE_UNCONFIRMED = constant('Shopware\\Core\\Checkout\\Order\\Aggregate\\OrderTransaction\\OrderTransactionStates::STATE_UNCONFIRMED') %}
 {% set ALLOWED_TRANSACTION_STATES = constant('Shopware\\Core\\Checkout\\Order\\SalesChannel\\OrderService::ALLOWED_TRANSACTION_STATES') %}
 {% set ORDER_STATE_CANCELLED = constant('Shopware\\Core\\Checkout\\Order\\OrderStates::STATE_CANCELLED') %}
+{% set PRODUCT_LINE_ITEM_TYPE = constant('Shopware\\Core\\Checkout\\Cart\\LineItem\\LineItem::PRODUCT_LINE_ITEM_TYPE') %}
 
 {% block page_account_order_item_overview %}
     <div class="order-wrapper">
@@ -16,9 +17,13 @@
                     ORDER_TRANSACTION_STATE_CANCELLED
                 ] %}
 
-                {% set state = order.transactions.last.stateMachineState.technicalName %}
+                {% set orderState = order.stateMachineState.technicalName %}
+                {% set orderPaymentState = order.transactions.last.stateMachineState.technicalName %}
 
-                {% set isPaymentNeeded = state in states %}
+                {# @deprecated tag:v6.5.0 - Use "orderPaymentState" instead. #}
+                {% set state = orderPaymentState %}
+
+                {% set isPaymentNeeded = orderPaymentState in states and orderState != ORDER_STATE_CANCELLED %}
 
                 <div class="row flex-wrap">
                     {% block page_account_order_item_heading %}
@@ -39,7 +44,7 @@
                                         {% endblock %}
                                     {% else %}
                                         {% block page_account_order_item_status_badge %}
-                                            <span class="badge badge-lg order-item-status-badge order-item-status-badge-{{ order.stateMachineState.technicalName}}">
+                                            <span class="badge badge-lg order-item-status-badge order-item-status-badge-{{ orderState }}">
                                                 {{ order.stateMachineState.translated.name }}
                                             </span>
                                         {% endblock %}
@@ -72,9 +77,6 @@
                                 {% block page_account_order_item_context_menu_content %}
                                     <div class="dropdown-menu dropdown-menu-right order-table-header-context-menu-content"
                                          aria-labelledby="accountOrderDropdown">
-
-                                        {% set orderState = order.stateMachineState.technicalName %}
-                                        {% set orderPaymentState = order.transactions.last.stateMachineState.technicalName %}
 
                                         {% if orderState != ORDER_STATE_CANCELLED and orderPaymentState in ALLOWED_TRANSACTION_STATES %}
                                             {% block page_account_order_item_context_menu_content_change_payment_button %}
@@ -117,7 +119,7 @@
                                                     {% block page_account_order_item_context_menu_reorder_form_line_items_input %}
                                                         {% for lineItem in order.lineItems %}
                                                             {% block page_account_order_item_context_menu_reorder_form_line_item_input %}
-                                                                {% if lineItem.type == 'product' %}
+                                                                {% if lineItem.type == PRODUCT_LINE_ITEM_TYPE %}
                                                                     <input type="hidden"
                                                                            name="lineItems[{{ lineItem.identifier }}][id]"
                                                                            value="{{ lineItem.identifier }}">
